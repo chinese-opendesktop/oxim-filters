@@ -1,0 +1,17 @@
+#!/bin/bash
+oxim-agent -i "$1"&
+
+test -z "$1" && exit
+
+for ((i=0; i<${#1}; i++))
+do
+    _FIRSTCHAR=${1:$i:1}
+
+    SHOWHEX=`echo -n "$_FIRSTCHAR" | iconv -t UCS-4BE | od -tx1 -An | tr -d ' ' | sed 's/^0*//'`
+    SHOWDEC=`echo -n "$_FIRSTCHAR" | iconv -t UCS-4LE | od -td -An | tr -d ' '`
+    SHOWOCT=`echo -n "$_FIRSTCHAR" | od -tx1 -An | tr -d ' '`
+
+    MSG_SHOWUNICODE+="$_FIRSTCHAR, U+$SHOWHEX, #$SHOWDEC, $SHOWOCT\n"
+done
+
+oxim-agent -m  "`echo -e $MSG_SHOWUNICODE`"

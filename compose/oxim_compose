@@ -1,0 +1,62 @@
+#!/bin/bash
+# oxim_compose, GPL (c) OpenDesktop <http://opendesktop.org.tw/>, 2009.
+
+_ENDCHAR=$'\n'
+_TEMPFILE=/tmp/oxim-compose-$(/usr/bin/id -u -n)
+if test -f "$_TEMPFILE" ; then
+  read _INPUT < "$_TEMPFILE"
+else
+  cat /dev/null > "$_TEMPFILE"
+  _INPUT=""
+fi
+
+case $LANG in
+  zh_CN*)
+    _MESSAGE=$'\nShift-Enter 进行组字'
+    _FOUND0=$'没有得到结果'
+    ;;
+  zh*)
+    _MESSAGE=$'\nShift-Enter 進行組字'
+    _FOUND0=$'沒有得到結果'
+    ;;
+  *)
+    _MESSAGE=$'\nShift-Enter to compose'
+    _FOUND0=$'Got no result'
+    ;;
+esac
+
+if which zhocompose >/dev/null 2>&1 ; then
+  if test "$#" -eq 1 ; then
+    if test "$1" == "$_ENDCHAR" -o ${#1} -gt 1 ; then
+      if test ${#1} -gt 1 ; then
+        _INPUT="$_INPUT$1"
+      fi
+      if test -n "$_INPUT" ; then
+        cat /dev/null > "$_TEMPFILE"
+        _OUTPUT=$(zhocompose "$_INPUT")
+        case ${#_OUTPUT} in
+          0)
+            oxim-agent -m "$_FOUND0"
+            ;;
+          1)
+            oxim-agent -m ""
+            oxim-agent -i "$_OUTPUT"
+            ;;
+          *)
+            oxim-agent -m ""
+            oxim-agent -s $_OUTPUT
+            ;;
+        esac
+      else
+        oxim-agent -i "$_ENDCHAR"
+      fi
+    else
+      oxim-agent -m "$_INPUT$1$_MESSAGE"
+      echo "$_INPUT$1" > "$_TEMPFILE"
+    fi
+  else
+    cat /dev/null > "$_TEMPFILE"
+  fi
+else
+  exit 1
+fi

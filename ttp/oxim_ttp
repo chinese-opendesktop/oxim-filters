@@ -1,0 +1,58 @@
+#!/bin/bash
+# Text to Phonetic for OXIM, GPL (c) OpenDesktop <http://opendesktop.org.tw/>, 2010.
+
+_ENDCHAR=$'\n'
+_TEMPFILE=/tmp/oxim-ttp-$(/usr/bin/id -u -n)
+if test -f "$_TEMPFILE" ; then
+  read _INPUT < "$_TEMPFILE"
+else
+  cat /dev/null > "$_TEMPFILE"
+  _INPUT=""
+fi
+
+case $LANG in
+  zh_CN*)
+    _MESSAGE=$'\nShift-Enter 进行转换'
+    _FOUND0=$'没有得到结果'
+    ;;
+  zh*)
+    _MESSAGE=$'\nShift-Enter 進行轉換'
+    _FOUND0=$'沒有得到結果'
+    ;;
+  *)
+    _MESSAGE=$'\nShift-Enter to transform'
+    _FOUND0=$'Got no result'
+    ;;
+esac
+
+if which zhottp >/dev/null 2>&1 ; then
+  if test "$#" -eq 1 ; then
+    if test "$1" == "$_ENDCHAR" -o ${#1} -gt 1 ; then
+      if test ${#1} -gt 1 ; then
+        _INPUT="$_INPUT$1"
+      fi
+      if test -n "$_INPUT" ; then
+        cat /dev/null > "$_TEMPFILE"
+        _BPMF=$(zhottp "$_INPUT")
+        if test -n "$_BPMF" ; then
+          _PINYIN=$(zhotrans -t pinyin "$_BPMF")
+          _BRAILE=$(zhotrans -t braile "$_BPMF")
+          oxim-agent -m ""
+          oxim-agent -s "$_BPMF" "$_PINYIN" "$_BRAILE"
+        else
+          oxim-agent -m "$_FOUND0"
+        fi
+      else
+        oxim-agent -i "$_ENDCHAR"
+      fi
+    else
+      oxim-agent -m "$_INPUT$1$_MESSAGE"
+      echo "$_INPUT$1" > "$_TEMPFILE"
+    fi
+  else
+    cat /dev/null > "$_TEMPFILE"
+  fi
+else
+  exit 1
+fi
+

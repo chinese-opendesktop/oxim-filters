@@ -1,0 +1,27 @@
+#!/bin/bash
+# Paste out for OXIM, , GPL (c) OpenDesktop <http://opendesktop.org.tw/>, 2010.
+
+if [ -z "$1" ] ; then
+  which xclip xdotool > /dev/null 2>&1 || exit 1
+  
+else
+  Focus=$(xdotool getwindowfocus getwindowname)
+  Focus=${Focus^^?}
+  if [ "${Focus#*SCRATCH}" != "$Focus" ] ; then
+    Tmp=`xclip -o -selection "clipboard"`
+    echo -n "$*" | xclip -selection "clipboard"
+    xdotool key Ctrl+v
+    sleep 0.05
+    echo -n "$Tmp"| xclip -selection "clipboard"
+  elif [ "${Focus#*ETOYS}" != "$Focus" ] ; then
+    Tmp=`xclip -o -selection "clipboard"`
+    echo -n "$*" | iconv -f utf8 -t utf16 | \
+             xclip -t text/html -selection "clipboard"
+    xdotool key Ctrl+v
+    sleep 0.05
+    echo -n "$Tmp"| xclip -selection "clipboard"
+  else
+    oxim-agent -i "$*"
+  fi
+fi
+

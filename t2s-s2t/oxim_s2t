@@ -1,0 +1,27 @@
+#!/bin/bash
+# 功能    : 打簡出繁
+# 使用方法: 將本檔案改名為filter,並chmod +x設為可執行
+#           放入使用者家目錄下的.oxim目錄下即可
+# 作者    : Harry
+# 時間    : 2009/07/31
+
+test -z "$1" && exit 
+
+#初始化最後要輸出的字串
+text=""
+
+exec 3>&2 2>/dev/null
+
+#一個字一個字處理
+for counter in `seq 0 $(( ${#1}-1 )) `
+do
+  simplified="${1:${counter}:1}"
+  tradition=`echo -n "${simplified}" | iconv -f utf8 -t gb2312 | iconv -f gb2312 -t big5 | iconv  -f big5 -t utf8`  
+  #如果$tradition是空的 表示找不到對應的繁體字 =>輸出原本輸入的简體字
+  text+=${tradition:-${simplified}}
+done
+
+exec 2>&3 3>&-
+
+oxim-agent -i "${text}"
+

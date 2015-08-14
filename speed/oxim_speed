@@ -1,0 +1,86 @@
+#!/bin/bash
+oxim-agent -i "$1"&
+
+COUNTFILE=/tmp/tempcountfile
+
+declare -i UNIT_MINUTE=60
+declare -i UNIT_HOUR=60*$UNIT_MINUTE
+NOW_TIMESTAMP=`date +%s.%N`
+declare -i COUNTWORDS=`echo -n "$1" | wc -m`
+declare -i PRE_COUNTWORDS=0
+MSG_TIMEBETWEEN=""
+
+test $# -lt 1 && exit
+
+case $LANG in
+    zh_TW.* )
+	_TIMEFROMLASTINPUT="離上一次打字間隔"
+	_CURRENTINPUT="目前輸入了"
+	_CURRENTSPEED="打字速度 "
+	_WORDS="個字"
+	_WORD="字"
+	_SECOND="秒"
+	_MINUTE="分"
+	_HOUR="時" ;;
+    zh_HK.* )
+	_TIMEFROMLASTINPUT="離上一次打字間隔"
+	_CURRENTINPUT="目前輸入了"
+	_CURRENTSPEED="打字速度 "
+	_WORDS="個字"
+	_SECOND="秒"
+	_MINUTE="分"
+	_WORD="字"
+	_HOUR="時" ;;
+    zh_CN.* )
+	_TIMEFROMLASTINPUT="离上一次打字间隔"
+	_CURRENTINPUT="目前输入了"
+	_CURRENTSPEED="打字速度 "
+	_WORDS="个字"
+	_WORD="字"
+	_SECOND="秒"
+	_MINUTE="分"
+	_HOUR="时" ;;
+    * )
+	_TIMEFROMLASTINPUT="time between last input "
+	_CURRENTINPUT="current:"
+	_CURRENTSPEED="speed: "
+	_WORDS=" words"
+	_WORD="word"
+	_SECOND="second"
+	_MINUTE="minute"
+	_HOUR="hour" ;;
+esac
+
+if test -f $COUNTFILE ; then
+    IFS=,
+    set `cat $COUNTFILE`
+    PRE_COUNTWORDS=$1
+    COUNTFILE_TIMESTAMP=$2
+    IFS=
+
+    #declare -i COUNTFILE_TIMESTAMP=`stat --format=%X $COUNTFILE`
+    #declare -i TIME_BETWEEN=$NOW_TIMESTAMP-$COUNTFILE_TIMESTAMP
+    TIME_BETWEEN=`echo "scale=3;$NOW_TIMESTAMP-$COUNTFILE_TIMESTAMP" | bc`
+    #test $TIME_BETWEEN -eq 0 && exit
+    SPEED=`echo "60/$TIME_BETWEEN*$COUNTWORDS" | bc`
+    #PRE_COUNTWORDS=`cat "$COUNTFILE"`
+
+    #TIME_TEXT=""
+    TIME_HOUR=`echo "$TIME_BETWEEN/$UNIT_HOUR/1" | bc`
+    TIME_MINUTE=`echo "($TIME_BETWEEN%$UNIT_HOUR)/$UNIT_MINUTE/1" | bc`
+    TIME_SECONDS=`echo "($TIME_BETWEEN%$UNIT_HOUR)%$UNIT_MINUTE/1;" | bc`
+    
+    test ! $TIME_HOUR = "0" && TIME_TEXT="$TIME_TEXT$TIME_HOUR$_HOUR"
+    test ! $TIME_MINUTE = "0" && TIME_TEXT="$TIME_TEXT$TIME_MINUTE$_MINUTE"
+    test ! $TIME_SECONDS = "0" && TIME_TEXT="$TIME_TEXT$TIME_SECONDS$_SECOND"
+    
+    MSG_TIMEBETWEEN=$'\n'"$_TIMEFROMLASTINPUT$TIME_TEXT"$'\n'"$_CURRENTSPEED$SPEED$_WORD/$_MINUTE"
+fi
+
+COUNTWORDS+=$PRE_COUNTWORDS
+echo -n "$COUNTWORDS,$NOW_TIMESTAMP" > $COUNTFILE
+
+MSG_COUNTWORDS="$_CURRENTINPUT$COUNTWORDS$_WORDS$MSG_TIMEBETWEEN"
+
+
+oxim-agent -m "$MSG_COUNTWORDS"

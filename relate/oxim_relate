@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if which zhorelate >/dev/null 2>&1 ; then
+  oxim-agent -i "$1"&
+  if [ -z "$1" ] ;then
+    exit 0
+  fi
+
+  _ALLWORD=$(zhorelate "$1")
+  oxim-agent -s   $_ALLWORD
+  exit
+else
+  exit 1
+fi
+

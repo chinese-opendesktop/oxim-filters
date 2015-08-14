@@ -1,0 +1,135 @@
+#!/bin/bash
+
+# Command line for text translate from Chinese to English by Google translate.
+# Auto switch Python, PHP or Shell Script
+# Ideas by William
+# Codes by Feather Mountain 
+# 
+# Web site : http://www.ossii.com.tw
+# License : LGPL
+# Last update : 2009-11-11
+#
+# Languages available for translation:
+# ar -> Arabic        bg -> Bulgarian     ca -> Catalan
+# cs -> Czech         da -> Danish        de -> German
+# el -> Greek         en -> English       es -> Spanish
+# fi -> Finnish       fr -> French        hi -> Hindi
+# hr -> Croatian      id -> Indonesian    it -> Italian
+# iw -> Hebrew        ja -> Japanese      ko -> Korean
+# lt -> Lithuanian    lv -> Latvian       nl -> Dutch
+# no -> Norwegian     pl -> Polish        pt -> Portuguese
+# ro -> Romanian      ru -> Russian       sk -> Slovak
+# sl -> Slovenian     sr -> Serbian       sv -> Swedish
+# tl -> Filipino      uk -> Ukrainian     vi -> Vietnamese
+# zh-CN -> Chinese(Simplified) zh-TW -> Chinese(Traditional)
+#
+
+# Translate from 
+LANG_FROM="zh-TW"
+
+# Translate to
+LANG_TO="en"
+
+# Auto switch 
+SWITCH_LIST="php python wget"
+for prog in $SWITCH_LIST;do if which $prog >/dev/null 2>&1; then EXEC_TRANS=$prog; break;fi;done
+
+_ENDCHAR=$'\n'
+_TEMPFILE=/tmp/oxim-translate-$(/usr/bin/id -u -n)
+
+if test -f "$_TEMPFILE" ; then
+  read _INPUT < "$_TEMPFILE"
+else
+  cat /dev/null > "$_TEMPFILE"
+  _INPUT=""
+fi
+
+case $LANG in
+  zh_CN*)
+    _MESSAGE=$'\nShift-Enter 进行翻译'
+    _FOUND0=$'没有得到结果'
+    ;;
+  zh*)
+    _MESSAGE=$'\nShift-Enter 進行翻譯'
+    _FOUND0=$'沒有得到結果'
+    ;;
+  *)
+    _MESSAGE=$'\nShift-Enter to translate'
+    _FOUND0=$'Got no result'
+    ;;
+esac
+
+if test "$#" -eq 0 ; then
+  cat /dev/null > "$_TEMPFILE"
+  ping -c 1 -w 1 www.google.com &> /dev/null && result=1 || result=0
+  if [ "$result" == "1" ] && [ "$EXEC_TRANS" != "" ];then
+    exit 0;
+  else 
+    exit 1;
+  fi
+fi
+
+if test "$1" == "$_ENDCHAR" -o ${#1} -gt 1 ; then
+  if test ${#1} -gt 1 ; then
+    _INPUT="$_INPUT$1"
+  fi
+  case $EXEC_TRANS in
+    "php")
+	 `which php` -r "
+		\$data = file_get_contents('http://translate.google.com/translate_s?hl=$LANG_FROM&source=translation_tab&sl=$LANG_FROM&tl=$LANG_TO&q='.urlencode('$_INPUT'));
+		\$matches=array();
+		preg_match_all('/<span id=otq><b>(.+?)<\/b>/',\$data,\$matches);
+		\$output=htmlspecialchars_decode(implode(\"\n\",\$matches[1]),ENT_QUOTES);
+		system('`which oxim-agent` -i \"'.\$output.'\"');
+		"
+	 ;;
+
+    "python")
+	 `which python` -c "
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import sys
+import re
+import urllib
+import urllib2
+import os
+def decode_htmlentities(string):
+	def substitute_entity(match):
+		ent = match.group(3)
+		if match.group(1) == \"#\":
+		  if match.group(2) == '':
+		    return unichr(int(ent))
+		  elif match.group(2) == 'x':
+		    return unichr(int('0x'+ent, 16))
+		  else:
+		    cp = n2cp.get(ent)
+		    if cp: return unichr(cp)
+		    else: return match.group()
+	entity_re = re.compile(r'&(#?)(x?)(\w+);')
+	return entity_re.subn(substitute_entity, string)[0]
+
+word = \"$_INPUT\"
+
+opener = urllib2.build_opener()
+opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+content = opener.open('http://translate.google.com/translate_s?hl=$LANG_FROM&source=translation_tab&sl=$LANG_FROM&tl=$LANG_TO&q='+urllib.quote(word)).read()
+
+output = ''
+for i in re.compile('<span id=otq><b>(.+?)</b>').findall(content):
+	output = output + i
+
+output=decode_htmlentities(output)
+sysoutput='`which oxim-agent` -i \"' + output + '\"'
+os.system(sysoutput)
+		" 
+	 ;;
+	"wget")
+		 `which oxim-agent` -i "`\`which wget\` -q -O- --user-agent="Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)"  --referer="http://www.google.com/translate_t?langpair=$LANG_FROM|$LANG_TO" "http://www.google.com/translate_t?langpair=$LANG_FROM|$LANG_TO&text=$_INPUT"|awk -F'<div id=result_box dir="ltr">' '{print $2}'|awk -F'</div>' '{print $1}'|grep -v "^$"`"
+	 ;;
+    esac
+    cat /dev/null > "$_TEMPFILE"
+    `which oxim-agent` -m ""
+else
+  `which oxim-agent` -m "$_INPUT$1$_MESSAGE"
+  echo "$_INPUT$1" > "$_TEMPFILE"
+fi

@@ -1,0 +1,98 @@
+#!/bin/bash
+
+#
+# Command line for text to speech
+# Auto choice player & text-to-speech for output wav file or play.
+# Ideas by William
+# Codes by Feather Mountain 
+# 
+# Web site : http://www.ossii.com.tw
+# License : LGPL
+# Last update : 2009-11-11
+#
+
+oxim-agent -i "$*"&
+
+# This System locale
+MySystemLocal=$LANG
+# Machine_Play_LIST, add by yourself.
+PLAY_LIST="play mplayer totem sox ogg123"
+
+# ERROR STATUS
+_ERROR_CHECK=0
+
+case $MySystemLocal in
+    "zh_TW"*|"zh_HK"*)
+	       # Text-to-speech_LIST, sort, edit or add by yourself.
+	       TEXT_TO_SPEECH_LIST="voicetext espeak zhspeak flite text2wave zhottp" 
+               case $MySystemLocal in
+                "zh_TW"*) PLAY_LANG="zh";;
+                "zh_HK"*) PLAY_LANG="zhy";;
+               esac
+	       
+	       ;;
+    "zh_CN"*) 
+               # Text-to-speech_LIST, sort, edit or add by yourself.
+	       TEXT_TO_SPEECH_LIST="voicetext espeak zhspeak flite text2wave zhottp" 
+ 	       PLAY_LANG="zh"
+	       ;;
+    "en_US"*|*)
+               # Text-to-speech_LIST, sort, edit or add by yourself.
+	       TEXT_TO_SPEECH_LIST="voicetext flite text2wave espeak zhspeak" 
+               PLAY_LANG="zh"
+	       ;;
+esac    
+
+  
+# System choice MACHINE_PLAYER
+for prog in $PLAY_LIST;do if which $prog >/dev/null 2>&1; then MACHINE_PLAYER=$prog; break;fi;done
+if [ "$MACHINE_PLAYER" == "" ]; then
+    _ERROR_CHECK=1
+fi
+
+# System choice TEXT_TO_SPEECH
+for prog in $TEXT_TO_SPEECH_LIST; do if which $prog >/dev/null 2>&1; then TEXT_TO_SPEECH=$prog; break;fi;done
+if [ "$TEXT_TO_SPEECH" == "" ]; then
+    _ERROR_CHECK=1
+fi
+  
+#Starts To Play 
+if [ "$*" != "" ] ; then
+    User=`whoami`
+    case $TEXT_TO_SPEECH in
+	"voicetext")
+		voicetext "$*" -o "/tmp/${User}_speak.wav" > /dev/null
+		$MACHINE_PLAYER "/tmp/${User}_speak.wav" > /dev/null
+                rm -f "/tmp/${User}_speak.wav"
+		;;
+        "espeak")
+                espeak -v $PLAY_LANG "$*" > /dev/null
+                ;;
+        "zhspeak")
+                zhspeak -$PLAY_LANG "$*" > /dev/null
+                ;;
+        "flite")
+                flite -t "$*" -o "/tmp/${User}_speak.wav" > /dev/null
+                $MACHINE_PLAYER "/tmp/${User}_speak.wav" > /dev/null
+                rm -f "/tmp/${User}_speak.wav"
+                ;;
+        "text2wave")
+                echo "$*" > /tmp/${User}_speak.txt
+                text2wave "/tmp/${User}_speak.txt" -o "/tmp/${User}_speak.wav" /dev/null
+                $MACHINE_PLAYER "/tmp/${User}_speak.wav" > /dev/null
+                rm -f "/tmp/${User}_speak.txt /tmp/${User}_speak.wav"		
+                ;;
+        "zhottp")
+                Phonetic=$( zhottp "$*" )
+                while grep -E "ˇ [^ ]*ˇ" > /dev/null <<< "$Phonetic" ; do
+                  Phonetic=$(sed -r 's/ˇ( [^ ]*ˇ)/ˊ\1/' <<< "$Phonetic")
+                done
+                SpeakFiles=$(echo " $Phonetic" | sed -r -e 'y/ˊˇˋ/234/' \
+                             -e 's/˙([^ ]+)/\11/g' \
+                             -e 's|([^ ]+)|/usr/share/gcin/ogg/\1/3.ogg|g')
+                ogg123 $SpeakFiles 2> /dev/null
+                ;;
+    esac 
+else
+    exit $_ERROR_CHECK
+fi

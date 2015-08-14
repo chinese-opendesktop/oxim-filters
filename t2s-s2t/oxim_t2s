@@ -1,0 +1,41 @@
+#!/bin/bash
+# 功能    : 打繁出簡
+# 使用方法: 將本檔案改名為filter,並chmod +x設為可執行
+#           放入使用者家目錄下的.oxim目錄下即可
+# 作者    : Harry
+# 時間    : 2009/07/31
+# 版本    : 2.5
+# 版本說明: 若輸入字串中含有不常見的字(ex:囧.喆.堃..等)時
+#           版本1會因無法找到對應的簡體字而出錯 =>整個輸入字串不見
+#           此版暫用此方法解決這個問題:
+#               case 1: 能找到對應的簡體字的字 => 輸出對應的簡體字
+#               case 2: 找不到對應的簡體字的字 => 輸出原本輸入的繁體字
+#           版本2若直接./oxim_t2s "字串"  來執行 
+#           會有 『iconv: 位置 0 有不合法的輸入序列』 錯誤訊息
+#           2.1版用 2>/dev/null 將錯誤訊息倒掉
+#           2.2版修改了部份程式碼來增加程式效能
+#              主要改:用for取代while;減少呼叫外部指令(oxim-agent)的次數
+#           2.3版修改掉2.2版多餘的程式碼
+#           2.4版省去wordcount變數;將if區塊程式碼簡化成一行
+#           2.5版用exec指令,省去每次都要2>/dev/null的麻煩;精簡判斷式
+
+test -z "$1" && exit 
+
+#初始化最後要輸出的字串
+text=""
+
+exec 3>&2 2>/dev/null
+
+#一個字一個字處理
+for counter in `seq 0 $(( ${#1}-1 )) `
+do
+  tradition="${1:${counter}:1}"
+  simplified=`echo -n "${tradition}" | iconv -f utf8 -t big5 | iconv -f big5 -t gb2312 | iconv -f gb2312 -t utf8`  
+  #如果$simplified是空的 表示找不到對應的簡體字 =>輸出原本輸入的繁體字
+  text+=${simplified:-${tradition}}
+done
+
+exec 2>&3 3>&-
+
+oxim-agent -i "${text}"
+

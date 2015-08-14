@@ -1,0 +1,67 @@
+#!/bin/bash
+# 功能    : 打字練習
+# 使用方法: 將本檔案改名為filter,並chmod +x設為可執行
+#           放入使用者家目錄下的.oxim目錄下即可
+# 想法    : William
+# 作者    : Vincent
+# 時間    : 2010/08/19 (1) 正確輸入字串消失 錯誤的輸入則留下
+# 更新(1) : 2010/08/23 (2) 加入 fortune 隨機選出唐詩或宋詞作為打字範例來源
+# 更新(2) : 2010/08/25 (3) for loop 內部複雜程式碼修改成較精簡版
+# 更新(3) : 2010/09/15 (4) 加入偵測 fortune-zh_TW 套件與切換輸入法時刪除舊打字練習檔
+# 所需套件: fortune-mod, and fortune-zh_TW
+
+
+# 宣告變數，取得打字輸入者ID，以及設定打字練習檔的存放位置
+LOGIN_NAME=`whoami`
+TEMPLATE_FILE="/tmp/oxim_typing_${LOGIN_NAME}.tmp"
+TEMPLATE_WORDS="" 
+
+# 檢查所需套件 fortune-zh_TW 是否安裝
+# 如果過濾器做切換的動作，則刪除舊的打字練習檔; 換句話說，即是輸入空字串時，爾後會產生新的打字練習檔
+if test -z "$1"; then
+	if rpm -q fortune-zh_TW >/dev/null; then
+		rm "${TEMPLATE_FILE}"
+	else exit 1
+	fi
+else
+
+# 將打字範例檔案內容顯示至訊息視窗
+    while read line; do TEMPLATE_WORDS+="${line}\n"; done < "${TEMPLATE_FILE}"
+
+# 初始化輸入的字串
+    KEYIN_WORDS=""; COMPARE_WORDS=""; FAULT_WORDS=""
+
+# 逐字比對，輸入正確的字串則從打字練習檔案中刪除，遇到"\","n"與" "自動刪除並持續比對
+    KEYIN_WORDS=$1
+
+    declare -i counter; declare -i flag; flag=0
+    for ((counter=0; counter<${#KEYIN_WORDS}; counter++))
+    do
+	    SUBSTR_WORDS=${KEYIN_WORDS:${counter}:1}
+	    COMPARE_WORDS=${TEMPLATE_WORDS:${flag}:1}
+	    if [ "${COMPARE_WORDS}" == "${SUBSTR_WORDS}" ]; then
+            flag=$(( $flag + 1 ))
+	    elif [ "${COMPARE_WORDS}" == \\ ] || [ "${COMPARE_WORDS}" == n ]; then
+	        flag=$(( $flag + 1 ))
+		    counter=$(( $counter - 1 ))
+            continue
+	    else
+		    FAULT_WORDS+=${SUBSTR_WORDS}
+		    break
+	    fi
+    done
+
+# 將鍵入的錯誤字留下至打字區域，並將打字練習檔案內容中未打完之內容輸出至"OXIM FILTER"的訊息視窗
+    TEMPLATE_WORDS=${TEMPLATE_WORDS:${flag}}
+    oxim-agent -i "${FAULT_WORDS}" &
+
+# 檢查打字練習檔案內容是否存在或者已經打完，如果不存在或打完則隨機從唐詩或宋詞中，產生一個新的打字練習內容
+    echo -e "${TEMPLATE_WORDS}" > "${TEMPLATE_FILE}"
+fi
+
+if ! test -f "${TEMPLATE_FILE}" -a `wc -w < "${TEMPLATE_FILE}"` -gt 0 ; then
+		fortune -s -n 210 tangshi songci | sed 's/[，。、]/ /g' | sed 's/^  *//' | sed 's/  */\n/g' > "${TEMPLATE_FILE}"
+        while read line; do TEMPLATE_WORDS+="${line}\n"; done < "${TEMPLATE_FILE}"
+fi
+
+oxim-agent -m "`echo -e ${TEMPLATE_WORDS}`"

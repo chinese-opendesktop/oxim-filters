@@ -1,0 +1,33 @@
+#!/bin/bash
+# Orthograpy for OXIM, GPL (c) OpenDesktop <http://opendesktop.org.tw/>, 2011.
+
+oxim-agent -i "$1" &
+_ENDCHAR=$'\n'
+_TEMPFILE=/tmp/oxim-ortho-$(/usr/bin/id -u -n)
+if test -f "$_TEMPFILE" ; then
+  read _INPUT < "$_TEMPFILE"
+else
+  cat /dev/null > "$_TEMPFILE"
+  _INPUT=""
+fi
+
+if which zhoortho >/dev/null 2>&1 ; then
+  if test "$#" -eq 1 ; then
+    _INPUT="$_INPUT$1"
+    if test -n "$_INPUT" ; then
+      _OUTPUT=$(zhoortho "$_INPUT"|sed 's/ /？→/')
+      if test -n "$_OUTPUT" ; then
+        oxim-agent -m "$_OUTPUT"
+      else
+        oxim-agent -m ""
+      fi
+    fi
+    _BEGIN=$((${#_INPUT}-4))
+#    echo "${_INPUT:$_BEGIN}" > "$_TEMPFILE"
+    echo "$_INPUT" > "$_TEMPFILE"
+  else
+    cat /dev/null > "$_TEMPFILE"
+  fi
+else
+  exit 1
+fi
