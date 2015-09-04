@@ -1,0 +1,24 @@
+Name
+----
+oxim-filters
+
+Description
+-----------
+Input-Method Filters for OXIM
+
+Install
+-------
+make install
+
+License
+-------
+GPL
+
+Authors
+-------
+Feather Mountain <john@ossii.com.tw>, 2010.
+Wind Win <yc.yan@ossii.com.tw>, 2010.
+Harry Chen <harry.chen@ossii.com.tw>, 2010.
+Chih-Chun Tu <vincent.tu@ossii.com.tw>, 2010.
+Wei-Lun Chao <william.chao@ossii.com.tw>, 2010.
+Wei-Lun Chao <bluebat@member.fsf.org>, 2015.
